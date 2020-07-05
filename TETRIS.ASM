@@ -36,7 +36,34 @@ BRDX    equ     ((SWIDTH - BWIDTH) / 2)
 BRDY    equ     ((SHEIGHT - BHEIGHT) / 2)
 
 NPIECES equ     7
-pieces  db      0E4h, 0E2h, 0C6h, 0CCh, 06Ch, 0E8h, 0F0h
+piece_i db      00001111b, 00000000b
+        db      00100010b, 00100010b
+        db      00000000b, 11110000b
+        db      01000100b, 01000100b
+piece_j db      10001110b, 00000000b
+        db      01100010b, 00100000b
+        db      00001110b, 00100000b
+        db      01000100b, 11000000b
+piece_l db      00101110b, 00000000b
+        db      01000100b, 01100000b
+        db      00001110b, 10000000b
+        db      11000100b, 01000000b
+piece_o db      01100110b, 00000000b
+        db      01100110b, 00000000b
+        db      01100110b, 00000000b
+        db      01100110b, 00000000b
+piece_s db      01101100b, 00000000b
+        db      01001100b, 10000000b
+        db      00000110b, 11000000b
+        db      10001100b, 01000000b
+piece_t db      01001110b, 00000000b
+        db      01000110b, 01000000b
+        db      00001110b, 01000000b
+        db      01001100b, 01000000b
+piece_z db      11000110b, 00000000b
+        db      00100110b, 01000000b
+        db      00001100b, 01100000b
+        db      01001100b, 10000000b
 
 CODESEG
 STARTUPCODE
@@ -48,16 +75,16 @@ PROC    main
         ;TEST: draw piece
         mov     dh,3
         mov     dl,4
-        mov     si,offset pieces
-        mov     ah,GREEN
-        mov     bh,1
-        call    draw_piece
+        mov     si,offset piece_l
+        mov     bx,offset draw_piece
+        call    foreach_piece
         mov     ah,0
         int     16h
         call    reset_screen
         mov     ax,04C00h
         int     21h
 ENDP    main
+
 
 PROC    clear_screen
 USES    ax,bx,dx
@@ -72,12 +99,14 @@ USES    ax,bx,dx
         ret
 ENDP    clear_screen
 
+
 PROC    reset_screen
 USES    ax
         mov     ax,00003h
         int     10h
         ret
 ENDP    reset_screen
+
 
 PROC    draw_border
         mov     ax,(BRDCOL SHL 8) OR B
@@ -99,16 +128,16 @@ __10:   mov     [word ptr es:di],ax
         ret
 ENDP    draw_border
 
+
 ;Parameters:
 ;       dh=y, dl=x in board coordinates
 ;       si=piece
-;       ah=color
-;       bh=1 - draw, bh=0 - erase
-PROC    draw_piece
-USES    ax,bx,cx,dx,si,di
+;       bx=func
+PROC    foreach_piece
+USES    ax,cx,si,di
         add     dh,BRDY
         add     dl,BRDX 
-        ;multiply y by 80, which is SWIDHT * 2
+        ;multiply y by 80, which is SWIDTH * 2
         xor     ch,ch
         mov     cl,dh
         shl     cx,4
@@ -120,9 +149,27 @@ USES    ax,bx,cx,dx,si,di
         mov     cl,dl
         shl     cx,1
         add     di,cx
-        ;TEST: put a single block
-        mov     al,B
-        mov     [word ptr es:di],ax
+        ;iterate over the piece
+        mov     ch,2
+__10:   lodsb
+        mov     cl,8
+__20:   shl     al,1
+        jnc     SHORT __30
+        call    bx
+__30:   add     di,2
+        dec     cl
+        test    cl,003h
+        jnz     SHORT __40
+        add     di,(SWIDTH-4)*2
+__40:   cmp     cl,0
+        jnz     SHORT __20
+        sub     ch,1
+        jnz     SHORT __10
+        ret
+ENDP    foreach_piece
+
+PROC    draw_piece
+        mov     [word ptr es:di],(GREEN SHL 8) OR 178
         ret
 ENDP    draw_piece
 
