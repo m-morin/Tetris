@@ -228,7 +228,11 @@ ENDP
 PROC    clear_screen
 USES    ax,bx,dx
         ;set video mode
-        mov     ax,00000h
+        mov     ax,00001h
+        int     10h
+        ;set 200 scanlines
+        mov     ax,01200h
+        mov     bl,003h
         int     10h
         ;hide cursor
         mov     ah,002h
