@@ -107,15 +107,22 @@ piece_z db      11000110b, 00000000b
 cur_pc  Piece   <?>
 col_pc  Piece   <?>
 collide db      ?
+fall    dw      ?
 
+STSPEED equ     10
+speed   dw      ?
 oldkb   dd      ?
 key     db      0
+oldtmr  dd      ?
+ticks   dw      0
 hex     db      "0123456789ABCDEF"
 
 CODESEG
 STARTUPCODE
 PROC    main
         call    install_keyboard
+        call    install_timer
+        mov     [word ptr speed],STSPEED
         mov     ax,VIDMEM
         mov     es,ax
         call    clear_screen
@@ -126,7 +133,9 @@ PROC    main
         mov     [cur_pc.x],1
         mov     [cur_pc.y],3
         mov     [cur_pc.color],BLUE
-        jmp     __draw
+        mov     ax,[word ptr ticks]
+        mov     [word ptr fall],ax
+        jmp     __fall
 __lp:   mov     ah,[byte ptr key]
         cmp     ah,ESCAPE
         je      __done
@@ -146,13 +155,21 @@ __left: cmp     ah,LEFT
         call    try_move_piece
         jmp     __draw
 __right:cmp     ah,RIGHT
-        jne     __lp
+        jne     __fall
         mov     [byte ptr key],0
         mov     dh,0
         mov     dl,1
         xor     cx,cx
         call    try_move_piece
-        jmp    __draw
+        jmp     __draw
+__fall: mov     ax,[word ptr ticks]
+        cmp     ax,[word ptr speed]
+        jb      __draw
+        mov     [word ptr ticks],0
+        mov     dh,1
+        mov     dl,0
+        xor     cx,cx
+        call    try_move_piece
 __draw: ;draw piece
         mov     si,offset cur_pc
         mov     bx,offset draw_piece
@@ -160,6 +177,7 @@ __draw: ;draw piece
         jmp     __lp
 __done: call    reset_screen
         call    uninstall_keyboard
+        call    uninstall_timer
         mov     ax,04C00h
         int     21h
 ENDP    main
@@ -198,21 +216,6 @@ PROC    keyboard
         test    al,080h
         jnz     __nodwn
         mov     [byte ptr key],al
-        ;debug print to screen
-        mov     bx,VIDMEM
-        mov     es,bx
-        mov     ch,RED
-        mov     bx,offset hex
-        mov     ah,al
-        and     al,00Fh
-        xlat
-        mov     cl,al
-        mov     [word ptr es:2],cx
-        mov     al,ah
-        shr     al,4
-        xlat
-        mov     cl,al
-        mov     [word ptr es:0],cx
 __nodwn:in      al,061h
         or      al,080h
         out     061h,al
@@ -220,6 +223,39 @@ __nodwn:in      al,061h
         out     061h,al
         mov     al,020h
         out     020h,al
+        popall
+        iret
+ENDP
+
+
+PROC    install_timer
+USES    ax,bx,es
+        ;save old handler
+        mov     ax,03508h
+        int     21h
+        mov     [word ptr oldtmr],bx
+        mov     [word ptr oldtmr+2],es
+        ;install new handler
+        mov     ax,02508h
+        mov     dx,OFFSET timer
+        int     21h
+        ret
+ENDP    install_timer
+
+PROC    uninstall_timer
+USES    ax,dx,ds
+        mov     ax,02508h
+        mov     dx,[word ptr oldtmr]
+        mov     ds,[word ptr oldtmr+2]
+        int     21h
+        ret
+ENDP    uninstall_timer
+
+PROC    timer
+        pushall
+        inc     [word ptr ticks]
+        pushf
+        call    cs:oldtmr
         popall
         iret
 ENDP
