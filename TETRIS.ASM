@@ -14,10 +14,33 @@ color   db      ?
 pad     db      ?
 ENDS    Piece
 
+MACRO   pushall
+        push    ax
+        push    cx
+        push    dx
+        push    bx
+        push    sp
+        push    bp
+        push    si
+        push    di
+ENDM    pushall
+
+MACRO   popall
+        pop     di
+        pop     si
+        pop     bp
+        pop     sp
+        pop     bx
+        pop     dx
+        pop     cx
+        pop     ax
+ENDM    popall
+
 DATASEG
 VIDMEM  equ     0B800h
 B       equ     219
 
+KBDPORT equ     060h
 ESCAPE  equ     1
 UP      equ     72
 DOWN    equ     80
@@ -85,9 +108,14 @@ cur_pc  Piece   <?>
 col_pc  Piece   <?>
 collide db      ?
 
+oldkb   dd      ?
+key     db      0
+hex     db      "0123456789ABCDEF"
+
 CODESEG
 STARTUPCODE
 PROC    main
+        call    install_keyboard
         mov     ax,VIDMEM
         mov     es,ax
         call    clear_screen
@@ -99,19 +127,19 @@ PROC    main
         mov     [cur_pc.y],3
         mov     [cur_pc.color],BLUE
         jmp     __draw
-__lp:   ;get input
-        xor     ah,ah
-        int     16h
+__lp:   mov     ah,[byte ptr key]
         cmp     ah,ESCAPE
         je      __done
 __up:   cmp     ah,UP
         jne     __left
+        mov     [byte ptr key],0
         mov     cx,2
         xor     dx,dx
         call    try_move_piece
         jmp     __draw
 __left: cmp     ah,LEFT
         jne     __right
+        mov     [byte ptr key],0
         mov     dh,0
         mov     dl,-1
         xor     cx,cx
@@ -119,6 +147,7 @@ __left: cmp     ah,LEFT
         jmp     __draw
 __right:cmp     ah,RIGHT
         jne     __lp
+        mov     [byte ptr key],0
         mov     dh,0
         mov     dl,1
         xor     cx,cx
@@ -130,9 +159,70 @@ __draw: ;draw piece
         call    foreach_piece
         jmp     __lp
 __done: call    reset_screen
+        call    uninstall_keyboard
         mov     ax,04C00h
         int     21h
 ENDP    main
+
+
+PROC    install_keyboard
+USES    ax,bx,dx,es
+        ;save old handler
+        mov     ax,03509h
+        int     21h
+        mov     [word ptr oldkb],bx
+        mov     [word ptr oldkb+2],es
+        ;install new handler
+        mov     ax,02509h
+        mov     dx,OFFSET keyboard
+        int     21h
+        ret
+ENDP    install_keyboard
+
+PROC    uninstall_keyboard
+USES    ax,dx,ds
+        ;install old handler
+        mov     ax,02509h
+        mov     dx,[word ptr oldkb]
+        mov     ds,[word ptr oldkb+2]
+        int     21h
+        ret
+ENDP    uninstall_keyboard
+
+PROC    keyboard
+        pushall
+        mov     ax,cs
+        mov     ds,ax
+        ;process keypresses
+        in      al,060h
+        test    al,080h
+        jnz     __nodwn
+        mov     [byte ptr key],al
+        ;debug print to screen
+        mov     bx,VIDMEM
+        mov     es,bx
+        mov     ch,RED
+        mov     bx,offset hex
+        mov     ah,al
+        and     al,00Fh
+        xlat
+        mov     cl,al
+        mov     [word ptr es:2],cx
+        mov     al,ah
+        shr     al,4
+        xlat
+        mov     cl,al
+        mov     [word ptr es:0],cx
+__nodwn:in      al,061h
+        or      al,080h
+        out     061h,al
+        and     al,07Fh
+        out     061h,al
+        mov     al,020h
+        out     020h,al
+        popall
+        iret
+ENDP
 
 
 PROC    clear_screen
