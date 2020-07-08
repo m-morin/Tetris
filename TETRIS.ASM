@@ -7,8 +7,6 @@ DATASEG
 speed           dw      ?
 fall            dw      0
 
-hex             db      "0123456789ABCDEF"
-
 CODESEG
 STARTUPCODE
 PROC            main
@@ -20,27 +18,29 @@ PROC            main
                 call    piece_spawn
                 jmp     __fall
 __lp:           call    vid_sync
-                mov     ah,[byte ptr key]
-                cmp     ah,ESCAPE
+                mov     bh,0
+                mov     bl,[byte ptr keys+SCAN_DOWN]
+                call    vid_debug_print
+                cmp     [byte ptr keys+SCAN_ESCAPE],1
                 je      __done
-__up:           cmp     ah,UP
+__up:           cmp     [byte ptr keys+SCAN_UP],1
                 jne     __left
-                mov     [byte ptr key],0
+                mov     [byte ptr keys+SCAN_UP],0
                 mov     cx,2
                 xor     dx,dx
                 call    piece_try_move
                 jmp     __draw
-__left:         cmp     ah,LEFT
+__left:         cmp     [byte ptr keys+SCAN_LEFT],1
                 jne     __right
-                mov     [byte ptr key],0
+                mov     [byte ptr keys+SCAN_LEFT],0
                 mov     dh,0
                 mov     dl,-1
                 xor     cx,cx
                 call    piece_try_move
                 jmp     __draw
-__right:        cmp     ah,RIGHT
+__right:        cmp     [byte ptr keys+SCAN_RIGHT],1
                 jne     __fall
-                mov     [byte ptr key],0
+                mov     [byte ptr keys+SCAN_RIGHT],0
                 mov     dh,0
                 mov     dl,1
                 xor     cx,cx
@@ -49,7 +49,10 @@ __right:        cmp     ah,RIGHT
 __fall:         mov     ax,[word ptr fall]
                 inc     ax
                 mov     [word ptr fall],ax
-                cmp     ax,[word ptr speed]
+                cmp     [byte ptr keys+SCAN_DOWN],1
+                jne     __fall2
+                shl     ax,3
+__fall2:        cmp     ax,[word ptr speed]
                 jb      __draw
                 mov     [word ptr fall],0
                 mov     dx,00100h

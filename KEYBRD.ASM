@@ -1,8 +1,10 @@
 INCLUDE COMMON.INC
 
+KBDPORT         equ     060h
+
 DATASEG
 oldkb           dd      ?
-key             db      0
+keys            db      128 dup(?)
 
 CODESEG
 PROC            key_install
@@ -33,10 +35,19 @@ PROC            keyboard
                 pushall
                 mov     ax,cs
                 mov     ds,ax
-                ;process keypresses
+                ;scancode in al
                 in      al,060h
-                test    al,080h
-                mov     [byte ptr key],al
+                ;register with keys array
+                xor     bx,bx
+                mov     bl,al
+                and     bl,07Fh
+                mov     ah,al
+                not     ah
+                rcl     ah,1
+                mov     ah,0
+                rcl     ah,1
+                mov     [byte ptr keys+bx],ah
+                ;process keypresses
                 in      al,061h
                 or      al,080h
                 out     061h,al

@@ -2,7 +2,27 @@ INCLUDE COMMON.INC
 
 VIDMEM          equ     0B800h
 
+DATASEG
+hex             db      "0123456789ABCDEF"
+
 CODESEG
+PROC            vid_debug_print
+USES            ax,bx
+                mov     ah,RED
+                xor     bh,bh
+                push    bx
+                and     bl,0F0h
+                shr     bl,4
+                mov     al,[byte ptr hex+bx]
+                mov     [word ptr es:0],ax
+                pop     bx
+                and     bl,00Fh
+                mov     al,[byte ptr hex+bx]
+                mov     [word ptr es:2],ax
+                ret
+ENDP            vid_debug_print
+
+
 PROC            vid_sync
 USES            ax,dx
                 mov     dx,003DAh

@@ -16,6 +16,11 @@ color           db      ?
 pad             db      ?
 ENDS            Piece
 
+STRUC           Control
+scancode        db      ?
+state           db      ?
+ENDS            Control
+
 ;******************
 ;***** Macros *****
 ;******************
@@ -46,12 +51,11 @@ ENDM            popall
 ;*********************
 B               equ     219
 
-KBDPORT         equ     060h
-ESCAPE          equ     1
-UP              equ     72
-DOWN            equ     80
-LEFT            equ     75
-RIGHT           equ     77
+SCAN_ESCAPE     equ     1
+SCAN_UP         equ     72
+SCAN_DOWN       equ     80
+SCAN_LEFT       equ     75
+SCAN_RIGHT      equ     77
 
 BLACK           equ     0
 BLUE            equ     1
@@ -98,6 +102,7 @@ GLOBAL          rand:PROC
 GLOBAL          key_install:PROC
 GLOBAL          key_uninstall:PROC
 
+GLOBAL          vid_debug_print:PROC
 GLOBAL          vid_sync:PROC
 GLOBAL          vid_init:PROC
 GLOBAL          vid_reset:PROC
@@ -114,7 +119,7 @@ GLOBAL          piece_spawn:PROC
 ;***** Data *****
 ;****************
 DATASEG
-GLOBAL          key:byte
+GLOBAL          keys:byte:128
 
 GLOBAL          pieces
 GLOBAL          cur_pc:Piece
