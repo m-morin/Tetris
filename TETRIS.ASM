@@ -75,6 +75,8 @@ BRDX    equ     ((SWIDTH - BWIDTH) / 2)
 BRDY    equ     ((SHEIGHT - BHEIGHT) / 2)
 
 NPIECES equ     7
+PCLEN   equ     8
+LABEL   pieces
 piece_i db      00001111b, 00000000b
         db      00100010b, 00100010b
         db      00000000b, 11110000b
@@ -104,6 +106,11 @@ piece_z db      11000110b, 00000000b
         db      00001100b, 01100000b
         db      01001100b, 10000000b
 
+NPCCOLS equ     4
+pccols  db      BLUE, GREEN, CYAN, RED
+
+SPAWNX  equ     4
+SPAWNY  equ     0
 cur_pc  Piece   <?>
 col_pc  Piece   <?>
 collide db      ?
@@ -116,25 +123,20 @@ key     db      0
 oldtmr  dd      ?
 ticks   dw      0
 hex     db      "0123456789ABCDEF"
+prng    dw      ?
 
 CODESEG
 STARTUPCODE
 PROC    main
         call    install_keyboard
         call    install_timer
+        call    prng_seed
         mov     [word ptr speed],STSPEED
         mov     ax,VIDMEM
         mov     es,ax
         call    clear_screen
         call    draw_border
-        ;TEST: setup test piece
-        mov     [cur_pc.offs],offset piece_t
-        mov     [cur_pc.rot],0
-        mov     [cur_pc.x],1
-        mov     [cur_pc.y],3
-        mov     [cur_pc.color],BLUE
-        mov     ax,[word ptr ticks]
-        mov     [word ptr fall],ax
+        call    spawn_piece
         jmp     __fall
 __lp:   mov     ah,[byte ptr key]
         cmp     ah,ESCAPE
@@ -255,7 +257,7 @@ PROC    timer
         pushall
         inc     [word ptr ticks]
         pushf
-        call    cs:oldtmr
+        call    [cs:oldtmr]
         popall
         iret
 ENDP
@@ -421,6 +423,58 @@ PROC    collide_piece
         inc     [byte ptr collide]
 __ret:  ret
 ENDP    collide_piece
+
+
+PROC    spawn_piece
+        ;get number from 0 to NPIECES (7)
+        call    prng_rand
+        and     ax,00007h
+        cmp     ax,NPIECES
+        jl      __10
+        dec     ax
+__10:   ;convert to offset
+        shl     ax,3
+        add     ax,OFFSET pieces
+        ;spawn piece
+        mov     [cur_pc.offs],ax
+        mov     [cur_pc.rot],0
+        mov     [cur_pc.x],SPAWNX
+        mov     [cur_pc.y],SPAWNY
+        ;generate random color
+        call    prng_rand
+        and     ax,00003h
+        mov     bx,ax
+        mov     al,[byte ptr pccols+bx]
+        mov     [cur_pc.color],al
+        ret
+ENDP    spawn_piece
+
+
+PROC    prng_seed
+USES    ax,cx,dx
+        xor     ax,ax
+        int     01Ah
+        mov     [word ptr prng],dx
+        ret
+ENDP    prng_seed
+
+
+PROC    prng_rand
+USES    bx
+        mov     ax,[word ptr prng]
+        mov     bx,ax
+        shl     bx,7
+        xor     ax,bx
+        mov     bx,ax
+        shl     bx,9
+        xor     ax,bx
+        mov     bx,ax
+        mov     bh,bl
+        xor     bl,bl
+        xor     ax,bx
+        mov     [word ptr prng],ax
+        ret
+ENDP    prng_rand
 
 
 END
