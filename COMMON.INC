@@ -74,7 +74,7 @@ BMAGENT         equ     13
 BBROWN          equ     14
 BWHITE          equ     15
 
-BRDCOL          equ     RED
+BRDCOL          equ     BWHITE
 
 SWIDTH          equ     40
 SHEIGHT         equ     25
@@ -89,7 +89,7 @@ PCLEN           equ     8
 
 SPAWNX          equ     4
 SPAWNY          equ     0
-NPCCOLS         equ     4
+NPCCOLS         equ     14
 STSPEED         equ     20
 
 ;****************
@@ -108,6 +108,7 @@ GLOBAL          vid_init:PROC
 GLOBAL          vid_reset:PROC
 GLOBAL          vid_draw_border:PROC
 
+GLOBAL          piece_to_screen:PROC
 GLOBAL          piece_try_move:PROC
 GLOBAL          piece_foreach:PROC
 GLOBAL          piece_draw:PROC

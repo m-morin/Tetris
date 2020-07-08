@@ -63,6 +63,7 @@ __fall2:        cmp     ax,[word ptr speed]
                 mov     si,OFFSET cur_pc
                 mov     bx,OFFSET piece_draw
                 call    piece_foreach
+                call    delete_full_rows
                 call    piece_spawn
 __draw:         ;draw piece
                 mov     si,OFFSET cur_pc
@@ -74,4 +75,48 @@ __done:         call    vid_reset
                 mov     ax,04C00h
                 int     21h
 ENDP            main
+
+;delete full rows starting from the
+;y position of the current piece downward
+;a maximum of 4
+PROC            delete_full_rows
+USES            ax,bx,cx,dx,si,di
+                xor     dl,dl
+                mov     dh,[cur_pc.y]
+                mov     cx,4
+                call    piece_to_screen
+                mov     si,dx
+__loop1:        mov     dx,cx
+                mov     cx,BWIDTH
+                xor     bx,bx
+__loop2:        cmp     [byte ptr es:si + bx],B
+                jne     __loop1e
+                add     bx,2
+                loop    __loop2
+                call    shift_down
+__loop1e:       mov     cx,dx
+                add     si,SWIDTH * 2
+                cmp     si,(BRDY + BHEIGHT) * SWIDTH * 2
+                jae     __ret
+                loop    __loop1
+__ret:          ret
+ENDP            delete_full_rows
+
+;shift the entire board down starting at si
+PROC            shift_down
+USES            cx,si,di,ds
+                mov     cx,es
+                mov     ds,cx
+__loop:         mov     di,si
+                sub     si,SWIDTH * 2
+                cmp     si,BRDY * SWIDTH * 2
+                jl      __ret
+                mov     cx,BWIDTH
+                push    si
+                rep     movsw
+                pop     si
+                jmp     __loop
+__ret:          ret
+ENDP
+
 END

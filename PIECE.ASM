@@ -30,7 +30,6 @@ piece_z         db      11000110b, 00000000b
                 db      00100110b, 01000000b
                 db      00001100b, 01100000b
                 db      01001100b, 10000000b
-pccols          db      BLUE, GREEN, CYAN, RED
 
 cur_pc          Piece   <?>
 col_pc          Piece   <?>
@@ -183,9 +182,8 @@ __10:           ;convert to offset
                 mov     [cur_pc.y],SPAWNY
                 ;generate random color
                 call    rand
-                and     ax,00003h
-                mov     bx,ax
-                mov     al,[byte ptr pccols+bx]
+                and     ax,00007h
+                or      ax,00008h
                 mov     [cur_pc.color],al
                 ret
 ENDP            piece_spawn
