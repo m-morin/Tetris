@@ -88,26 +88,14 @@ USES            ax,cx,si,di
                 ;place piece on board
                 mov     dh,[(Piece ptr si).y]
                 mov     dl,[(Piece ptr si).x]
-                add     dh,BRDY
-                add     dl,BRDX 
+                call    piece_to_screen
+                mov     di,dx
                 ;get offset to piece data
                 mov     ax,[(Piece ptr si).offs]
                 mov     cx,[(Piece ptr si).rot]
                 and     cx,00007h
                 add     ax,cx
                 mov     si,ax
-                ;multiply y by 80, which is SWIDTH * 2
-                xor     ch,ch
-                mov     cl,dh
-                shl     cx,4
-                mov     di,cx
-                shl     cx,2
-                add     di,cx
-                ;multiply x by 2
-                xor     ch,ch
-                mov     cl,dl
-                shl     cx,1
-                add     di,cx
                 ;iterate over the piece
                 mov     ch,2
 __10:           lodsb
@@ -149,6 +137,32 @@ PROC            piece_collide
                 inc     [byte ptr collide]
 __ret:          ret
 ENDP            piece_collide
+
+;converts board x,y to screen offset
+;Parmameters:   dh=y, dl=x
+;Returns:       dx=offset
+PROC            piece_to_screen
+USES            bx,cx,di
+                ;place on board
+                add     dh,BRDY
+                add     dl,BRDX 
+                ;multiply y by 80, which is SWIDTH * 2
+                xor     bh,bh
+                mov     bl,dh
+                mov     cl,4
+                shl     bx,cl
+                mov     di,bx
+                shl     bx,1
+                shl     bx,1
+                add     di,bx
+                ;multiply x by 2
+                xor     bh,bh
+                mov     bl,dl
+                shl     bx,1
+                add     di,bx
+                mov     dx,di
+                ret
+ENDP            piece_to_screen
 
 
 PROC            piece_spawn
