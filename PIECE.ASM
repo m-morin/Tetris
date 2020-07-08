@@ -152,6 +152,7 @@ ENDP            piece_collide
 
 
 PROC            piece_spawn
+USES            ax,bx
                 ;get number from 0 to NPIECES (7)
                 call    rand
                 and     ax,00007h
